@@ -2285,6 +2285,21 @@ class UpdateSkillVersionRequest(BaseModel):
     status: str | None = None
 
 
+class BulkRegisterSkillRequest(BaseModel):
+    name: str
+    source_type: str | None = None
+    source: str
+    ref: str | None = None
+    subpath: str | None = None
+    digest: str
+    status: str = SkillStatus.ACTIVE.value
+
+
+class BulkRegisterSkillsRequest(BaseModel):
+    organization: str = ""
+    skills: list[BulkRegisterSkillRequest] = Field(min_length=1)
+
+
 class CreateAgentPluginRequest(BaseModel):
     name: str
     organization: str = ""
@@ -2411,12 +2426,17 @@ class SkillResponse(BaseModel):
     icons: list[RegistryIcon] | None = None
     status: str | None = None
     latest_version: int | None = None
+    source_type: str | None = None
     aliases: list[SkillAliasResponse] = Field(default_factory=list)
     tags: dict[str, str] = Field(default_factory=dict)
     created_by: str | None = None
     last_updated_by: str | None = None
     creation_timestamp: int | None = None
     last_updated_timestamp: int | None = None
+
+
+class BulkRegisterSkillsResponse(BaseModel):
+    skill_versions: list[SkillVersionResponse]
 
 
 class AgentPluginVersionResponse(BaseModel):
