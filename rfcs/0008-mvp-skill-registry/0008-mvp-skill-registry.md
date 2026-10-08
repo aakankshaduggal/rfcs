@@ -1018,6 +1018,10 @@ sending a prepared batch to `POST /skills/bulk-register`. The endpoint invokes
 the store's `bulk_register_skills` operation, which registers the entire batch
 in one database transaction.
 
+Discovery stops descending at each skill root, even if that skill is filtered
+out. Nested manifests remain supporting content of the enclosing skill and are
+not inspected or registered separately.
+
 Each selected directory is registered as an ordinary, independently
 addressable skill. Its version retains the repository URL and ref, with
 `subpath` set to that skill's directory. A new name creates a skill and its
