@@ -1282,10 +1282,15 @@ independently of the plugin (see below).
 
 The Skill parent-tag and version-tag deletion levels follow the corresponding
 model registry operations. This update does not change AgentPlugin permissions.
+
 - **Skill authorization uses the qualified identity.** Skill names can repeat
   across organizations, so grants and search filtering identify a skill by
   `(organization, name)`. Search applies the caller's readable-skill filter
-  before pagination. Reading MLflow-managed skill artifacts requires READ on
+  before pagination, intersected with any public qualified-identity selector.
+  Each page checks current permissions; permission changes do not invalidate
+  page tokens. See [pagination and filtering](implementation-details.md#pagination-and-filtering)
+  for selector encoding and best-effort offset behavior.
+  Reading MLflow-managed skill artifacts requires READ on
   the owning Skill; malformed paths within the skill artifact namespace cannot
   fall back to broader workspace or default artifact access.
 - **Registration checks the parent operation.** Creating a new Skill requires
