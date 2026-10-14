@@ -1121,6 +1121,29 @@ claim; the client-facing `MlflowClient` and `mlflow.genai` methods take
 only `source`, whose typed class carries the explicit type when there is
 one.
 
+### Skill authorization and backend support
+
+The basic-auth middleware owns Skill route policies; shared Skill handlers
+remain independent of the auth application. For registration, middleware
+authorizes creation or EDIT based on whether the parent exists and passes an
+internal `expected_parent_exists` precondition to the store. Single-version
+creation takes a Boolean; bulk registration takes a name-to-Boolean mapping.
+These parameters are not public REST or SDK inputs. The SQL store checks them
+inside the registration transaction and returns HTTP 409 on a mismatch,
+rolling back the entire bulk batch when applicable. The check compares
+existence only and does not detect deletion followed by recreation under the
+same identity. Creator grants and deletion grant cleanup run after tracking
+commits in separate auth transactions, with the limits described in
+[Permissions](0008-mvp-skill-registry.md#permissions).
+
+A REST-backed tracking store can forward a finite effective include list for
+Skill search through the public `include_skill_identities` selector, after
+subtracting internal exclusions. It cannot enforce exclusions on an
+unrestricted search or atomic registration parent-existence preconditions.
+Those operations raise `NOT_IMPLEMENTED` (HTTP 501) before sending a remote
+request and require a SQL tracking backend. Ordinary REST clients calling an
+authenticated SQL-backed server continue to use the public API.
+
 ### Audit metadata
 
 `created_by` and `last_updated_by` are server-derived audit fields. They are
@@ -1209,6 +1232,7 @@ class SkillRegistryMixin:
         digest: str | None = None,
         status: str = "active",
         created_by: str | None = None,
+        expected_parent_exists: bool | None = None,
     ) -> SkillVersion:
         raise NotImplementedError(self.__class__.__name__)
 
@@ -1217,6 +1241,7 @@ class SkillRegistryMixin:
         skill_definitions: list[dict[str, Any]],
         organization: str = "",
         created_by: str | None = None,
+        expected_parent_exists: dict[str, bool] | None = None,
     ) -> list[SkillVersion]:
         """Register client-prepared skill definitions in one database
         transaction. An entry whose name, source, ref, subpath, and digest
@@ -2260,8 +2285,9 @@ The API intersects this selector with the caller's current READ scope and
 passes the effective include list plus internal exclusions to the store.
 The store applies both before pagination. Internal identity lists contain
 `(organization, name)` pairs; the exclusion list is not a public query parameter.
-Skill search tokens bind to workspace, filter expression, and ordering, but not
-to identity lists or grants. Every page reapplies current authorization.
+Skill search tokens bind to workspace, search surface, filter expression, and
+ordering, but not to identity lists or grants. Every page reapplies current
+authorization.
 Pagination uses best-effort offsets: changing data, permissions, or the selector
 between pages can skip or repeat entries, but does not permit returning a Skill
 excluded by the current authorization scope.
